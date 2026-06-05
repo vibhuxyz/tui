@@ -89,13 +89,11 @@ export const chatCommand = new Command("chat")
                 .map((p: any) => p.text)
                 .join("");
               if (textContent) {
-                // In a real TUI we'd stream, but for now we just handle it
               }
             }
           },
         );
 
-        // Update history with new messages from this turn
         chatHistory.push(...results);
 
         const lastMessage = results[results.length - 1];

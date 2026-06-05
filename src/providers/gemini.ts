@@ -7,7 +7,6 @@ function toGeminiContents(history: any[]) {
     .filter((message) => message.role !== "system")
     .map((message) => {
       if (message.role === "assistant") {
-        // If we have original Gemini parts, use them to preserve thought_signature, thoughts, etc.
         if (message.metadata?.geminiParts) {
           return {
             role: "model",
@@ -58,7 +57,9 @@ function toGeminiContents(history: any[]) {
 }
 
 export async function executeGemini(req: ChatRequest): Promise<ChatResponse> {
-  const systemMessage = req.history.find((message) => message.role === "system");
+  const systemMessage = req.history.find(
+    (message) => message.role === "system",
+  );
   const tools = req.tools.map((tool) => tool.schema.function);
 
   const response = await fetch(
@@ -74,8 +75,7 @@ export async function executeGemini(req: ChatRequest): Promise<ChatResponse> {
           ? { parts: [{ text: systemMessage.content }] }
           : undefined,
         contents: toGeminiContents(req.history),
-        tools:
-          tools.length > 0 ? [{ functionDeclarations: tools }] : undefined,
+        tools: tools.length > 0 ? [{ functionDeclarations: tools }] : undefined,
       }),
     },
   );
@@ -83,7 +83,10 @@ export async function executeGemini(req: ChatRequest): Promise<ChatResponse> {
   if (!response.ok) {
     console.error("Gemini error ", response.statusText);
     const errorData = await response.json().catch(() => null);
-    console.error("Gemini API Error details:", JSON.stringify(errorData, null, 2));
+    console.error(
+      "Gemini API Error details:",
+      JSON.stringify(errorData, null, 2),
+    );
     process.exit(1);
   }
 
