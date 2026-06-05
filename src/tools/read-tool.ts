@@ -1,0 +1,83 @@
+import { AgentTool } from "../types";
+import fs from "node:fs/promises";
+import { truncateByBytes } from "./truncate";
+
+export const readTool: AgentTool = {
+  name: "read_file",
+  label: "Read File",
+  description: "Read the text contents of a file.",
+  schema: {
+    type: "function",
+    function: {
+      name: "read_file",
+      description:
+        "Read the contents of a file. Use offset and limit for large files.",
+      parameters: {
+        type: "object",
+        properties: {
+          path: { type: "string" },
+          offset: { type: "number" },
+          limit: { type: "number" },
+        },
+
+        required: ["path"],
+      },
+    },
+  },
+
+  execute: async (args: any) => {
+    try {
+      const filePath = args.path;
+      const offset = args.offset || 1;
+      const limit = args.limit || 500;
+
+      console.log(`\n system runing 'read' for pattern ${filePath}`);
+
+      await fs.access(filePath);
+
+      // read the file contents
+      const content = await fs.readFile(filePath, "utf-8");
+
+      const allLines = content.split("\n");
+      const totalLine = allLines.length;
+
+      const startIndex = Math.max(0, offset - 1);
+
+      if (startIndex >= totalLine) {
+        throw new Error(
+          `offset ${offset} is beyond the file lines ${totalLine} line total`,
+        );
+      }
+
+      // apply the limit
+      const endIndex = Math.min(startIndex + limit, totalLine);
+
+      const selectedContent = allLines.slice(startIndex, endIndex).join("\n");
+
+      let outputText = selectedContent;
+
+      if (endIndex < totalLine) {
+        const nextOffset = endIndex + 1;
+
+        outputText += `\n\n [Warning:file truncated.  more line in the file, use offset=${nextOffset} to read next chunk ]`;
+      }
+      const safeOutput = truncateByBytes(outputText);
+
+      return {
+        content: [{ type: "text", text: safeOutput }],
+        details: {},
+      };
+    } catch (error: any) {
+      console.error(`read_file tool error ${error.message}`);
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Failed to excuate read_file: ${error.message}`,
+          },
+        ],
+        details: {},
+      };
+    }
+  },
+};

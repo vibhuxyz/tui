@@ -1,0 +1,98 @@
+import { ChatRequest, ChatResponse } from "../core/model-registry";
+
+const GEMINI_MODEL = "gemini-3.5-flash";
+
+function toGeminiContents(history: any[]) {
+  return history
+    .filter((message) => message.role !== "system")
+    .map((message) => {
+      if (message.role === "assistant" && message.geminiParts) {
+        return {
+          role: "model",
+          parts: message.geminiParts,
+        };
+      }
+
+      if (message.role === "assistant") {
+        return {
+          role: "model",
+          parts: [{ text: message.content ?? "" }],
+        };
+      }
+
+      if (message.role === "tool") {
+        return {
+          role: "user",
+          parts: [
+            {
+              functionResponse: {
+                name: message.name,
+                response: { result: message.content },
+              },
+            },
+          ],
+        };
+      }
+
+      return {
+        role: "user",
+        parts: [{ text: message.content ?? "" }],
+      };
+    });
+}
+
+export async function executeGemini(req: ChatRequest): Promise<ChatResponse> {
+  const systemMessage = req.history.find((message) => message.role === "system");
+  const tools = req.tools.map((tool) => tool.schema.function);
+
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": req.apiKey,
+      },
+      body: JSON.stringify({
+        systemInstruction: systemMessage
+          ? { parts: [{ text: systemMessage.content }] }
+          : undefined,
+        contents: toGeminiContents(req.history),
+        tools:
+          tools.length > 0 ? [{ functionDeclarations: tools }] : undefined,
+      }),
+    },
+  );
+
+  if (!response.ok) {
+    console.error("Gemini error ", response.statusText);
+    const errorData = await response.json().catch(() => null);
+    console.error("Gemini API Error details:", JSON.stringify(errorData, null, 2));
+    process.exit(1);
+  }
+
+  const data = await response.json();
+  const parts = data.candidates?.[0]?.content?.parts ?? [];
+  const text = parts
+    .filter((part: any) => typeof part.text === "string")
+    .map((part: any) => part.text)
+    .join("");
+  const functionCalls = parts.filter((part: any) => part.functionCall);
+
+  return {
+    text: text || null,
+    toolCalls:
+      functionCalls.length > 0
+        ? functionCalls.map((part: any, index: number) => ({
+            id: `gemini-tool-${index}`,
+            name: part.functionCall.name,
+            arguments: part.functionCall.args ?? {},
+          }))
+        : null,
+    rawMessage: {
+      role: "assistant",
+      content: text || null,
+      geminiParts: parts,
+    },
+  };
+}
