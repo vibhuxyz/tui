@@ -1,9 +1,15 @@
-import { AgentTool } from "../types";
+import { AgentTool, AgentToolResult } from "../types";
+
+export type MessagePart =
+  | { type: "text"; text: string }
+  | { type: "toolCall"; toolCall: AgentToolCall }
+  | { type: "thinking"; thinking: string };
 
 export interface AgentToolCall {
   id: string;
   name: string;
   arguments: any;
+  metadata?: any;
 }
 
 export interface UserMessage {
@@ -18,8 +24,10 @@ export interface SystemMessage {
 
 export interface AssistantMessage {
   role: "assistant";
-  content: string | null;
+  content: MessagePart[];
   toolCalls?: AgentToolCall[];
+  stopReason?: "stop" | "tool_calls" | "error" | "aborted";
+  metadata?: any;
 }
 
 export interface ToolResultMessage {
@@ -27,6 +35,9 @@ export interface ToolResultMessage {
   toolCallId: string;
   name: string;
   content: string;
+  isError?: boolean;
+  terminate?: boolean;
+  metadata?: any;
 }
 
 export type AgentMessage =
@@ -37,23 +48,75 @@ export type AgentMessage =
 
 export interface AgentContext {
   cwd: string;
+  messages: AgentMessage[];
   activeToolNames: string[];
+  systemPrompt?: string;
+  tools?: AgentTool[];
 }
-
-
-export interface AgentToolResult {
-  content: { type: "text", text: string }[];
-  metadata?:any
-}
-
 
 export interface BeforeToolCallContext {
+  assistantMessage: AssistantMessage;
   toolCall: AgentToolCall;
-  context:AgentContext
+  context: AgentContext;
 }
 
 export interface AfterToolCallContext {
+  assistantMessage: AssistantMessage;
   toolCall: AgentToolCall;
   result: AgentToolResult;
-  context:AgentContext
+  isError: boolean;
+  context: AgentContext;
 }
+
+export interface ShouldStopAfterTurnContext {
+  message: AssistantMessage;
+  toolResults: ToolResultMessage[];
+  context: AgentContext;
+  newMessages: AgentMessage[];
+}
+
+import { ProviderName } from "../core/auth-storage";
+
+export interface AgentLoopConfig {
+  provider: ProviderName;
+  apiKey: string;
+  maxTurns?: number;
+  toolExecution?: "sequential" | "parallel";
+  beforeToolCall?: (
+    ctx: BeforeToolCallContext,
+  ) => Promise<{ block?: boolean; reason?: string } | void>;
+  shouldStopAfterTurn?: (ctx: ShouldStopAfterTurnContext) => Promise<boolean>;
+}
+
+export type AgentEvent =
+  | { type: "agent_start" }
+  | { type: "agent_end"; message: AgentMessage[] }
+  | { type: "turn_start" }
+  | {
+      type: "turn_end";
+      message: AssistantMessage;
+      toolResults: ToolResultMessage[];
+    }
+  | { type: "message_start"; message: AgentMessage }
+  | { type: "message_update"; message: AssistantMessage }
+  | { type: "message_end"; message: AgentMessage }
+  | {
+      type: "tool_execution_start";
+      toolCallId: string;
+      toolName: string;
+      args: any;
+    }
+  | {
+      type: "tool_execution_end";
+      toolCallId: string;
+      toolName: string;
+      result: AgentToolResult;
+      isError: boolean;
+    };
+
+export type AgentEventSink = (event: AgentEvent) => Promise<void> | void;
+
+export type ExecutedToolCallBatch = {
+  messages: ToolResultMessage[];
+  terminate: boolean;
+};

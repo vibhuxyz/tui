@@ -1,6 +1,7 @@
 export interface AgentToolResult<T = any> {
   content: { type: "text"; text: string }[];
-  details: T;
+  details?: T;
+  terminate?: boolean;
 }
 
 export interface ToolSchema {
@@ -18,7 +19,5 @@ export interface AgentTool {
   description: string;
   schema: ToolSchema;
   execute: (args: any) => Promise<AgentToolResult>;
+  executionMode?: "sequential" | "parallel";
 }
-
-
-

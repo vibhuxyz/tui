@@ -1,16 +1,18 @@
 import { Command } from "commander";
 
-import { agentLoop } from "../src/engine/agentLoop";
 import { input, password, select } from "@inquirer/prompts";
 import chalk from "chalk";
 import { getAllTools } from "../src/tools";
 import { AuthStorage, ProviderName } from "../src/core/auth-storage";
+import { runAgentLoop } from "../src/engine/agentLoop";
+import { AgentMessage } from "../src/engine/type";
 
 export const chatCommand = new Command("chat")
   .description("start chat session..")
   .action(async () => {
     console.log(chalk.bold.blue("Welcome to tui \n"));
     let activeProvider = AuthStorage.getAuthenticatedProviders()[0] ?? "openai";
+    const chatHistory: AgentMessage[] = [];
 
     if (!AuthStorage.getApiKey(activeProvider)) {
       console.log(
@@ -65,15 +67,45 @@ export const chatCommand = new Command("chat")
 
       try {
         console.log(chalk.dim("Thinking..."));
-        const finalAnswer = await agentLoop(
-          promptStr,
-          activeKey,
-          activeTools,
-          activeProvider,
+        const results = await runAgentLoop(
+          [{ role: "user", content: promptStr }],
+          {
+            cwd: process.cwd(),
+            messages: chatHistory,
+            activeToolNames: activeTools.map((t) => t.name),
+            tools: activeTools,
+          },
+          {
+            provider: activeProvider,
+            apiKey: activeKey,
+          },
+          (event) => {
+            if (
+              event.type === "message_end" &&
+              event.message.role === "assistant"
+            ) {
+              const textContent = event.message.content
+                .filter((p) => p.type === "text")
+                .map((p: any) => p.text)
+                .join("");
+              if (textContent) {
+                // In a real TUI we'd stream, but for now we just handle it
+              }
+            }
+          },
         );
-        console.log(
-          `\n${chalk.bold.cyan("Agent:")} ${chalk.cyan(finalAnswer)}\n`,
-        );
+
+        // Update history with new messages from this turn
+        chatHistory.push(...results);
+
+        const lastMessage = results[results.length - 1];
+        if (lastMessage && lastMessage.role === "assistant") {
+          const text = lastMessage.content
+            .filter((p) => p.type === "text")
+            .map((p: any) => p.text)
+            .join("");
+          console.log(`\n${chalk.bold.cyan("Agent:")} ${chalk.cyan(text)}\n`);
+        }
       } catch (error) {
         console.error(chalk.red("Agent Error:"), error);
       }

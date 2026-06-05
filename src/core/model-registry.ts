@@ -1,7 +1,8 @@
 import { AgentTool } from "../types";
+import { ProviderName } from "./auth-storage";
 
 export interface ChatRequest {
-  provider: "openai" | "gemini";
+  provider: ProviderName;
   apiKey: string;
   prompt: string;
   history: any[];

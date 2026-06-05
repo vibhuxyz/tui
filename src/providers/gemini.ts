@@ -6,17 +6,33 @@ function toGeminiContents(history: any[]) {
   return history
     .filter((message) => message.role !== "system")
     .map((message) => {
-      if (message.role === "assistant" && message.geminiParts) {
-        return {
-          role: "model",
-          parts: message.geminiParts,
-        };
-      }
-
       if (message.role === "assistant") {
+        // If we have original Gemini parts, use them to preserve thought_signature, thoughts, etc.
+        if (message.metadata?.geminiParts) {
+          return {
+            role: "model",
+            parts: message.metadata.geminiParts,
+          };
+        }
+
+        const parts = message.content.map((part: any) => {
+          if (part.type === "text") {
+            return { text: part.text };
+          }
+          if (part.type === "toolCall") {
+            return {
+              functionCall: {
+                name: part.toolCall.name,
+                args: part.toolCall.arguments,
+                ...part.toolCall.metadata,
+              },
+            };
+          }
+          return { text: "" };
+        });
         return {
           role: "model",
-          parts: [{ text: message.content ?? "" }],
+          parts: parts,
         };
       }
 
@@ -83,11 +99,15 @@ export async function executeGemini(req: ChatRequest): Promise<ChatResponse> {
     text: text || null,
     toolCalls:
       functionCalls.length > 0
-        ? functionCalls.map((part: any, index: number) => ({
-            id: `gemini-tool-${index}`,
-            name: part.functionCall.name,
-            arguments: part.functionCall.args ?? {},
-          }))
+        ? functionCalls.map((part: any, index: number) => {
+            const { name, args, ...rest } = part.functionCall;
+            return {
+              id: `gemini-tool-${index}`,
+              name: name,
+              arguments: args ?? {},
+              metadata: rest, // This captures thought_signature and any other fields
+            };
+          })
         : null,
     rawMessage: {
       role: "assistant",
