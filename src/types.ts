@@ -19,3 +19,6 @@ export interface AgentTool {
   schema: ToolSchema;
   execute: (args: any) => Promise<AgentToolResult>;
 }
+
+
+
