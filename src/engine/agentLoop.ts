@@ -138,6 +138,7 @@ async function streamAssistantResponse(
     if (config.provider === "openai") {
       response = await executeOpenAI({
         apiKey: config.apiKey,
+        model: config.model,
         history: llmMessages,
         tools: activeTools,
         provider: "openai",
@@ -146,6 +147,7 @@ async function streamAssistantResponse(
     } else if (config.provider === "gemini") {
         response = await executeGemini({
             apiKey: config.apiKey,
+            model: config.model,
             history: llmMessages,
             tools: activeTools,
             provider: "gemini",

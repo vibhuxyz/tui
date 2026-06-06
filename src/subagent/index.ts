@@ -44,6 +44,7 @@ async function runSingleAgent(
     {
       provider: activeProvider,
       apiKey: activeKey,
+      model: agent.model,
       maxTurns: 15,
     },
     (event) => {
@@ -156,8 +157,13 @@ export const nativeSubagentTool: AgentTool = {
       const promises = args.tasks.map(async (t: any) => {
         const agent = agents.find((a) => a.name === t.agent);
         if (!agent) return `Agent ${t.agent} not found.`;
-        const output = await runSingleAgent(agent, t.task, cwd);
-        return `### ${t.agent}\n${output}`;
+        try {
+          const output = await runSingleAgent(agent, t.task, cwd);
+          return `### ${t.agent}\n${output}`;
+        } catch (error: any) {
+          console.log(chalk.red(`  [${t.agent}] failed: ${error.message}`));
+          return `### ${t.agent} (FAILED)\nError: ${error.message}`;
+        }
       });
 
       const results = await Promise.all(promises);

@@ -80,6 +80,7 @@ import { ProviderName } from "../core/auth-storage";
 export interface AgentLoopConfig {
   provider: ProviderName;
   apiKey: string;
+  model?: string;
   maxTurns?: number;
   toolExecution?: "sequential" | "parallel";
   beforeToolCall?: (

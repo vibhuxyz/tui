@@ -10,7 +10,7 @@ export async function executeOpenAI(req: ChatRequest): Promise<ChatResponse> {
       Authorization: `Bearer ${req.apiKey}`,
     },
     body: JSON.stringify({
-      model: "gpt-5.4-mini",
+      model: req.model || "gpt-4o-mini",
       messages: req.history,
       tools: openaiTools.length > 0 ? openaiTools : undefined,
       tool_choice: openaiTools.length > 0 ? "auto" : undefined,
@@ -18,13 +18,8 @@ export async function executeOpenAI(req: ChatRequest): Promise<ChatResponse> {
   });
 
   if (!response.ok) {
-    console.error("Open ai error ", response.statusText);
     const errorData = await response.json();
-    console.error(
-      "OpenAI API Error details:",
-      JSON.stringify(errorData, null, 2),
-    );
-    process.exit(1);
+    throw new Error(`OpenAI API Error: ${response.statusText}\nDetails: ${JSON.stringify(errorData, null, 2)}`);
   }
 
   const data = await response.json();
@@ -33,11 +28,22 @@ export async function executeOpenAI(req: ChatRequest): Promise<ChatResponse> {
   let toolCalls = null;
 
   if (assistantMessage.tool_calls) {
-    toolCalls = assistantMessage.tool_calls.map((tc: any) => ({
-      id: tc.id,
-      name: tc.function.name,
-      arguments: JSON.parse(tc.function.arguments),
-    }));
+    toolCalls = assistantMessage.tool_calls.map((tc: any) => {
+      try {
+        return {
+          id: tc.id,
+          name: tc.function.name,
+          arguments: JSON.parse(tc.function.arguments),
+        };
+      } catch (e) {
+        console.error("Failed to parse tool arguments:", tc.function.arguments);
+        return {
+          id: tc.id,
+          name: tc.function.name,
+          arguments: {}, // Fallback to empty object
+        };
+      }
+    });
   }
 
   return {

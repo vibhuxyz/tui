@@ -1,7 +1,5 @@
 import { ChatRequest, ChatResponse } from "../core/model-registry";
 
-const GEMINI_MODEL = "gemini-3.1-pro-preview";
-
 function toGeminiContents(history: any[]) {
   return history
     .filter((message) => message.role !== "system")
@@ -62,8 +60,10 @@ export async function executeGemini(req: ChatRequest): Promise<ChatResponse> {
   );
   const tools = req.tools.map((tool) => tool.schema.function);
 
+  const modelToUse = req.model || "gemini-3-flash-preview";
+
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
+    `https://generativelanguage.googleapis.com/v1beta/models/${modelToUse}:generateContent`,
     {
       method: "POST",
       headers: {
@@ -81,13 +81,8 @@ export async function executeGemini(req: ChatRequest): Promise<ChatResponse> {
   );
 
   if (!response.ok) {
-    console.error("Gemini error ", response.statusText);
     const errorData = await response.json().catch(() => null);
-    console.error(
-      "Gemini API Error details:",
-      JSON.stringify(errorData, null, 2),
-    );
-    process.exit(1);
+    throw new Error(`Gemini API Error: ${response.statusText}\nDetails: ${JSON.stringify(errorData, null, 2)}`);
   }
 
   const data = await response.json();
@@ -108,7 +103,7 @@ export async function executeGemini(req: ChatRequest): Promise<ChatResponse> {
               id: `gemini-tool-${index}`,
               name: name,
               arguments: args ?? {},
-              metadata: rest, // This captures thought_signature and any other fields
+              metadata: rest, 
             };
           })
         : null,

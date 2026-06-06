@@ -1,5 +1,6 @@
 import { AgentTool } from "../types";
 import fs from "node:fs/promises";
+import path from "node:path";
 import { truncateByBytes } from "./truncate";
 
 export const readTool: AgentTool = {
@@ -27,11 +28,16 @@ export const readTool: AgentTool = {
 
   execute: async (args: any) => {
     try {
-      const filePath = args.path;
+      const rawPath = args.path;
       const offset = args.offset || 1;
       const limit = args.limit || 500;
 
-      console.log(`\n system runing 'read' for pattern ${filePath}`);
+      const filePath = path.resolve(process.cwd(), rawPath);
+      if (!filePath.startsWith(process.cwd())) {
+        throw new Error(`Permission denied: Cannot read file outside of project directory: ${rawPath}`);
+      }
+
+      console.log(`\n system runing 'read' for pattern ${rawPath}`);
 
       await fs.access(filePath);
 

@@ -4,6 +4,7 @@ import { ProviderName } from "./auth-storage";
 export interface ChatRequest {
   provider: ProviderName;
   apiKey: string;
+  model?: string;
   prompt: string;
   history: any[];
   tools: AgentTool[];

@@ -1,10 +1,10 @@
 import { rgPath } from "@vscode/ripgrep";
-import { AgentTool } from "../types";
-import { promisify } from "node:util";
-import { exec } from "node:child_process";
-import test from "node:test";
 
-const execAsync = promisify(exec);
+import { promisify } from "node:util";
+import { execFile } from "node:child_process";
+import { AgentTool } from "../types";
+
+const execFileAsync = promisify(execFile);
 
 export const grepTool: AgentTool = {
   name: "grep",
@@ -36,21 +36,23 @@ export const grepTool: AgentTool = {
   execute: async (agrs: any) => {
     try {
       const pattern = agrs.pattern;
-
       const targetPath = agrs.dirPath || ".";
 
       console.log(
         `\n system runing 'grep' for pattern ${pattern} in ${targetPath}`,
       );
 
-      // -n is line number and -i is case senstive
-      const command = `"${rgPath}" -n -i "${pattern}" ${targetPath}`;
-
       let stdout = "";
 
       try {
-        const result = await execAsync(command);
-
+        // execFile bypasses the shell entirely, so we don't have to worry about
+        // escaping quotes or bash syntax errors!
+        const result = await execFileAsync(rgPath, [
+          "-n",
+          "-i",
+          pattern,
+          targetPath,
+        ]);
         stdout = result.stdout;
       } catch (execError: any) {
         if (execError.code === 1) {
@@ -74,9 +76,7 @@ export const grepTool: AgentTool = {
       }
 
       const lines = stdout.split("\n");
-
       const limit = 50;
-
       let output = lines.slice(0, limit).join("\n");
 
       if (lines.length > limit) {

@@ -90,14 +90,12 @@ export const chatCommand = new Command("chat")
             },
             (event) => {
               if (
-                event.type === "message_end" &&
+                event.type === "message_update" &&
                 event.message.role === "assistant"
               ) {
-                const textContent = event.message.content
-                  .filter((p) => p.type === "text")
-                  .map((p: any) => p.text)
-                  .join("");
-                if (textContent) {
+                const textPart = event.message.content.find(p => p.type === "text" && "text" in p);
+                if (textPart && "text" in textPart) {
+                  // Optional: Implement proper streaming here if the engine supports deltas
                 }
               }
             },
@@ -140,7 +138,19 @@ export const chatCommand = new Command("chat")
               console.log(
                 chalk.yellow("Sending feedback and squashing history..."),
               );
-              chatHistory.splice(-2, 2);
+              
+              // Robust Squashing: Remove the last assistant message and all subsequent tool results
+              let lastAssistantIndex = -1;
+              for (let i = chatHistory.length - 1; i >= 0; i--) {
+                if (chatHistory[i].role === "assistant") {
+                  lastAssistantIndex = i;
+                  break;
+                }
+              }
+              if (lastAssistantIndex !== -1) {
+                chatHistory.splice(lastAssistantIndex);
+              }
+
               currentPrompts = [
                 {
                   role: "user",
