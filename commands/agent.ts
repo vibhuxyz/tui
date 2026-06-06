@@ -1,8 +1,9 @@
 import { Command } from "commander";
 
-import { getAllTools } from "../src/tools";
+import { getOrchestratorTools } from "../src/tools";
 import { AuthStorage } from "../src/core/auth-storage";
 import { runAgentLoop } from "../src/engine/agentLoop";
+import { buildSystemPrompt } from "../src/engine/systemPrompt";
 
 export const agentCommand = new Command("agent")
   .description("Runs the agent")
@@ -23,13 +24,16 @@ export const agentCommand = new Command("agent")
       process.exit(1);
     }
 
-    const activeTools = getAllTools();
+    const activeTools = getOrchestratorTools();
 
     console.log("Asking OpenAI (and checking tools)...");
 
     try {
       const results = await runAgentLoop(
-        [{ role: "user", content: prompt }],
+        [
+          { role: "system", content: buildSystemPrompt() },
+          { role: "user", content: prompt },
+        ],
         {
           cwd: process.cwd(),
           messages: [],

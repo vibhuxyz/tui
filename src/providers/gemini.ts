@@ -1,6 +1,6 @@
 import { ChatRequest, ChatResponse } from "../core/model-registry";
 
-const GEMINI_MODEL = "gemini-3.5-flash";
+const GEMINI_MODEL = "gemini-3.1-pro-preview";
 
 function toGeminiContents(history: any[]) {
   return history
