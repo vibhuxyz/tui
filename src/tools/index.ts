@@ -29,7 +29,7 @@ export function getAllTools(): AgentTool[] {
 }
 
 export function getOrchestratorTools(): AgentTool[] {
-  return [weatherTool, planTool, nativeSubagentTool];
+  return getAllTools();
 }
 
 export function getReadOnlyTools(): AgentTool[] {

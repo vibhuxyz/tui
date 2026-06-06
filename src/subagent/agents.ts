@@ -8,6 +8,8 @@ export interface AgentConfig {
   description: string;
   tools?: string[];
   model?: string;
+  openai_model?: string;
+  gemini_model?: string;
   systemPrompt: string;
   source: "user" | "project";
   filePath: string;
@@ -18,10 +20,8 @@ export interface AgentDiscoveryResult {
   projectAgentsDir: string | null;
 }
 
-function parseFrontmatter(content: string): {
-  frontmatter: Record<string, string>;
-  body: string;
-} {
+// Simple built-in frontmatter parser
+function parseFrontmatter(content: string): { frontmatter: Record<string, string>; body: string } {
   const parts = content.split("---");
   if (parts.length < 3) return { frontmatter: {}, body: content };
 
@@ -37,12 +37,8 @@ function parseFrontmatter(content: string): {
   return { frontmatter, body };
 }
 
-function loadAgentsFromDir(
-  dir: string,
-  source: "user" | "project",
-): AgentConfig[] {
+function loadAgentsFromDir(dir: string, source: "user" | "project"): AgentConfig[] {
   const agents: AgentConfig[] = [];
-
   if (!fs.existsSync(dir)) return agents;
 
   let entries: fs.Dirent[];
@@ -54,7 +50,6 @@ function loadAgentsFromDir(
 
   for (const entry of entries) {
     if (!entry.name.endsWith(".md")) continue;
-
     const filePath = path.join(dir, entry.name);
     let content: string;
     try {
@@ -62,7 +57,6 @@ function loadAgentsFromDir(
     } catch {
       continue;
     }
-
     const { frontmatter, body } = parseFrontmatter(content);
 
     if (!frontmatter.name || !frontmatter.description) continue;
@@ -77,12 +71,13 @@ function loadAgentsFromDir(
       description: frontmatter.description,
       tools: tools && tools.length > 0 ? tools : undefined,
       model: frontmatter.model,
+      openai_model: frontmatter.openai_model,
+      gemini_model: frontmatter.gemini_model,
       systemPrompt: body,
       source,
       filePath,
     });
   }
-
   return agents;
 }
 

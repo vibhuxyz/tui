@@ -16,6 +16,14 @@ async function runSingleAgent(
 
   if (!activeKey) throw new Error("No API key available for subagent.");
 
+  // DYNAMIC MODEL SELECTION
+  let selectedModel = agent.model; // global fallback
+  if (activeProvider === "openai" && agent.openai_model) {
+    selectedModel = agent.openai_model;
+  } else if (activeProvider === "gemini" && agent.gemini_model) {
+    selectedModel = agent.gemini_model;
+  }
+
   const allAvailableTools = getAllTools();
   const toolAliases: Record<string, string> = {
     read: "read_file",
@@ -44,7 +52,7 @@ async function runSingleAgent(
     {
       provider: activeProvider,
       apiKey: activeKey,
-      model: agent.model,
+      model: selectedModel,
       maxTurns: 15,
     },
     (event) => {

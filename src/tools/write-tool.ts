@@ -1,11 +1,12 @@
-import { AgentTool, AgentToolResult } from "../engine/type";
 import * as fs from "fs/promises";
 import * as path from "path";
+import { AgentTool, AgentToolResult } from "../types";
 
 export const writeTool: AgentTool = {
   name: "write_file",
   label: "Write File",
-  description: "Write complete content to a new or existing file. This OVERWRITES the entire file. Use 'edit_file' for surgical changes.",
+  description:
+    "Write complete content to a new or existing file. This OVERWRITES the entire file. Use 'edit_file' for surgical changes.",
   schema: {
     type: "function",
     function: {
@@ -33,14 +34,18 @@ export const writeTool: AgentTool = {
       // Ensure the directory exists
       await fs.mkdir(path.dirname(fullPath), { recursive: true });
       await fs.writeFile(fullPath, args.content, "utf-8");
-      
+
       return {
-        content: [{ type: "text", text: `Successfully wrote to ${args.file_path}` }],
+        content: [
+          { type: "text", text: `Successfully wrote to ${args.file_path}` },
+        ],
         terminate: false,
       };
     } catch (error: any) {
       return {
-        content: [{ type: "text", text: `Failed to write file: ${error.message}` }],
+        content: [
+          { type: "text", text: `Failed to write file: ${error.message}` },
+        ],
         terminate: false,
       };
     }

@@ -14,4 +14,9 @@ export interface ChatResponse {
   text: string | null;
   toolCalls: Array<{ id: string; name: string; arguments: any }> | null;
   rawMessage: any;
+  usage?: {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+  };
 }

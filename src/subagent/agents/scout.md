@@ -2,7 +2,8 @@
 name: scout
 description: Fast codebase recon that returns compressed context for handoff to other agents
 tools: read_file, grep, find, ls
-model: gemini-2.5-flash
+openai_model: gpt-4o-mini
+gemini_model: gemini-2.5-flash
 ---
 
 You are a scout. Investigate the codebase and return structured findings that another agent can use without re-reading everything.

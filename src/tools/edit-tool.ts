@@ -1,11 +1,12 @@
-import { AgentTool, AgentToolResult } from "../engine/type";
 import * as fs from "fs/promises";
 import * as path from "path";
+import { AgentTool, AgentToolResult } from "../types";
 
 export const editTool: AgentTool = {
   name: "edit_file",
   label: "Edit File",
-  description: "Surgically replace text in an existing file. Provide the EXACT old string you want to replace, and the EXACT new string.",
+  description:
+    "Surgically replace text in an existing file. Provide the EXACT old string you want to replace, and the EXACT new string.",
   schema: {
     type: "function",
     function: {
@@ -20,7 +21,8 @@ export const editTool: AgentTool = {
           },
           old_string: {
             type: "string",
-            description: "The EXACT literal text currently in the file that you want to replace.",
+            description:
+              "The EXACT literal text currently in the file that you want to replace.",
           },
           new_string: {
             type: "string",
@@ -38,7 +40,12 @@ export const editTool: AgentTool = {
 
       if (!content.includes(args.old_string)) {
         return {
-          content: [{ type: "text", text: `Edit failed: Could not find the exact 'old_string' in ${args.file_path}. Make sure whitespace and indentation match perfectly.` }],
+          content: [
+            {
+              type: "text",
+              text: `Edit failed: Could not find the exact 'old_string' in ${args.file_path}. Make sure whitespace and indentation match perfectly.`,
+            },
+          ],
           terminate: false,
         };
       }
@@ -46,22 +53,31 @@ export const editTool: AgentTool = {
       // Check for multiple occurrences to warn the agent
       const occurrences = content.split(args.old_string).length - 1;
       if (occurrences > 1) {
-         return {
-          content: [{ type: "text", text: `Edit failed: 'old_string' was found ${occurrences} times. Your old_string must be unique to avoid accidental replacements.` }],
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Edit failed: 'old_string' was found ${occurrences} times. Your old_string must be unique to avoid accidental replacements.`,
+            },
+          ],
           terminate: false,
         };
       }
 
       const newContent = content.replace(args.old_string, args.new_string);
       await fs.writeFile(fullPath, newContent, "utf-8");
-      
+
       return {
-        content: [{ type: "text", text: `Successfully edited ${args.file_path}` }],
+        content: [
+          { type: "text", text: `Successfully edited ${args.file_path}` },
+        ],
         terminate: false,
       };
     } catch (error: any) {
       return {
-        content: [{ type: "text", text: `Failed to edit file: ${error.message}` }],
+        content: [
+          { type: "text", text: `Failed to edit file: ${error.message}` },
+        ],
         terminate: false,
       };
     }
